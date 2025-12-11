@@ -235,44 +235,36 @@ export const useGameStore = create((set, get) => ({
   showLevelUpChoices: () => {
     const { run } = get();
 
-    // Generate 4 random choices
+    // Generate 3 random choices
     const choices = [];
-    const types = ['stat', 'stat', 'item', 'skill'];
 
-    // Stat choices
-    const statOptions = [
-      { type: 'stat', icon: 'ATK', name: 'ATK +5', effect: { atk: 5 } },
-      { type: 'stat', icon: 'DEF', name: 'DEF +3', effect: { def: 3 } },
-      { type: 'stat', icon: 'HP', name: 'Max HP +20', effect: { maxHp: 20 } },
-      { type: 'stat', icon: 'SPD', name: 'Speed +0.1', effect: { spd: 0.1 } },
-      { type: 'stat', icon: 'CRIT', name: 'Crit +5%', effect: { crit: 0.05 } },
+    // All possible choices with categories
+    const allOptions = [
+      // Stats
+      { type: 'stat', category: 'Stat Boost', icon: 'ATK', name: 'Power Strike', desc: 'ATK +5', effect: { atk: 5 } },
+      { type: 'stat', category: 'Stat Boost', icon: 'DEF', name: 'Iron Skin', desc: 'DEF +3', effect: { def: 3 } },
+      { type: 'stat', category: 'Stat Boost', icon: 'HP', name: 'Vitality', desc: 'Max HP +20', effect: { maxHp: 20 } },
+      { type: 'stat', category: 'Stat Boost', icon: 'SPD', name: 'Swift Foot', desc: 'Speed +10%', effect: { spd: 0.1 } },
+      { type: 'stat', category: 'Stat Boost', icon: 'CRIT', name: 'Precision', desc: 'Crit Rate +5%', effect: { crit: 0.05 } },
+      // Items
+      { type: 'item', category: 'Equipment', icon: 'Sword', name: 'Sharp Blade', desc: 'ATK +10', effect: { atk: 10 } },
+      { type: 'item', category: 'Equipment', icon: 'Shield', name: 'Steel Shield', desc: 'DEF +8', effect: { def: 8 } },
+      { type: 'item', category: 'Equipment', icon: 'Ring', name: 'Crit Ring', desc: 'Crit Rate +8%', effect: { crit: 0.08 } },
+      { type: 'item', category: 'Equipment', icon: 'Boots', name: 'Wind Boots', desc: 'Speed +15%', effect: { spd: 0.15 } },
+      // Skills
+      { type: 'skill', category: 'Skill', icon: 'Heal', name: 'Recovery', desc: 'Heal +20% boost', effect: 'healBoost' },
+      { type: 'skill', category: 'Skill', icon: 'Spin', name: 'Whirlwind', desc: 'Spin Range +1', effect: 'spinRange' },
+      { type: 'skill', category: 'Skill', icon: 'Dash', name: 'Quick Step', desc: 'Dash CD -1s', effect: 'dashCooldown' },
     ];
 
-    // Item choices
-    const itemOptions = [
-      { type: 'item', icon: 'Sword', name: 'Sword', effect: { atk: 10 } },
-      { type: 'item', icon: 'Shield', name: 'Shield', effect: { def: 8 } },
-      { type: 'item', icon: 'Ring', name: 'Ring', effect: { crit: 0.08 } },
-      { type: 'item', icon: 'Boots', name: 'Boots', effect: { spd: 0.15 } },
-    ];
-
-    // Skill choices
-    const skillOptions = [
-      { type: 'skill', icon: 'Heal', name: 'Heal Upgrade', effect: 'healBoost' },
-      { type: 'skill', icon: 'Spin', name: 'Spin Range +', effect: 'spinRange' },
-      { type: 'skill', icon: 'Dash', name: 'Dash CD -1s', effect: 'dashCooldown' },
-    ];
-
-    // Pick random choices
-    const shuffled = [...statOptions].sort(() => Math.random() - 0.5);
-    choices.push(shuffled[0], shuffled[1]);
-    choices.push(itemOptions[Math.floor(Math.random() * itemOptions.length)]);
-    choices.push(skillOptions[Math.floor(Math.random() * skillOptions.length)]);
+    // Shuffle and pick 3 unique choices
+    const shuffled = [...allOptions].sort(() => Math.random() - 0.5);
+    choices.push(shuffled[0], shuffled[1], shuffled[2]);
 
     set({
       gameState: 'levelup',
       showLevelUp: true,
-      levelUpChoices: choices.sort(() => Math.random() - 0.5),
+      levelUpChoices: choices,
     });
   },
 

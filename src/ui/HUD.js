@@ -121,17 +121,35 @@ export class UIManager {
     state.levelUpChoices.forEach((choice, index) => {
       const card = document.createElement('div');
       card.className = 'choice-card';
+
+      // Get category class for colored badge
+      const categoryClass = choice.type || 'stat';
+
       card.innerHTML = `
-        <div class="choice-icon">${this.getChoiceIcon(choice)}</div>
-        <div class="choice-name">${choice.name}</div>
-        <div class="choice-desc">${this.getChoiceDesc(choice)}</div>
+        <div class="choice-icon-wrapper">
+          <div class="choice-icon-frame">
+            <span class="choice-icon">${this.getChoiceIcon(choice)}</span>
+          </div>
+        </div>
+        <div class="choice-info">
+          <div class="choice-name">${choice.name}</div>
+          <div class="choice-category ${categoryClass}">${choice.category || choice.type}</div>
+          <div class="choice-desc">${this.getChoiceDesc(choice)}</div>
+        </div>
       `;
 
       card.addEventListener('click', (e) => {
         e.stopPropagation();
-        useGameStore.getState().selectLevelUpChoice(choice);
-        levelUpUI.classList.remove('active');
-        this.levelUpShown = false;
+        // Add selection animation
+        card.style.transform = 'scale(1.05) translateY(-10px)';
+        card.style.borderColor = '#2ed573';
+        card.style.boxShadow = '0 10px 0 #229954, 0 15px 30px rgba(46, 213, 115, 0.4)';
+
+        setTimeout(() => {
+          useGameStore.getState().selectLevelUpChoice(choice);
+          levelUpUI.classList.remove('active');
+          this.levelUpShown = false;
+        }, 200);
       });
 
       container.appendChild(card);
@@ -143,7 +161,7 @@ export class UIManager {
       'ATK': '⚔️',
       'DEF': '🛡️',
       'HP': '❤️',
-      'SPD': '👟',
+      'SPD': '⚡',
       'CRIT': '💥',
       'Sword': '🗡️',
       'Shield': '🛡️',
@@ -157,15 +175,20 @@ export class UIManager {
   }
 
   getChoiceDesc(choice) {
+    // Use the desc from choice data if available
+    if (choice.desc) {
+      return `<span class="highlight">${choice.desc}</span>`;
+    }
+
     if (choice.type === 'stat' || choice.type === 'item') {
       const effects = [];
       for (const [key, value] of Object.entries(choice.effect)) {
         const sign = value > 0 ? '+' : '';
-        effects.push(`${key.toUpperCase()} ${sign}${value}`);
+        effects.push(`<span class="highlight">${key.toUpperCase()} ${sign}${value}</span>`);
       }
       return effects.join(', ');
     }
-    return 'Skill upgrade';
+    return '<span class="highlight">Skill upgrade</span>';
   }
 
   showGameOver(state) {
