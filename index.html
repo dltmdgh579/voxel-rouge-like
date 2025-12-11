@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Voxel Survivor</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      overflow: hidden;
+      background: #1a1a2e;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    #game-container {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    /* HUD Styles */
+    #hud {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      padding: 15px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent);
+      color: white;
+      pointer-events: none;
+    }
+
+    .hud-left, .hud-center, .hud-right {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+    }
+
+    .stat-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(0,0,0,0.5);
+      padding: 8px 15px;
+      border-radius: 8px;
+      font-size: 16px;
+    }
+
+    .hp-bar {
+      width: 200px;
+      height: 20px;
+      background: #333;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 2px solid #555;
+    }
+
+    .hp-fill {
+      height: 100%;
+      background: linear-gradient(to right, #ff4757, #ff6b81);
+      transition: width 0.3s ease;
+    }
+
+    .exp-bar {
+      width: 150px;
+      height: 12px;
+      background: #333;
+      border-radius: 6px;
+      overflow: hidden;
+      border: 2px solid #555;
+    }
+
+    .exp-fill {
+      height: 100%;
+      background: linear-gradient(to right, #2ed573, #7bed9f);
+      transition: width 0.3s ease;
+    }
+
+    .day-display {
+      font-size: 24px;
+      font-weight: bold;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    }
+
+    .timer-display {
+      font-size: 20px;
+      font-family: monospace;
+    }
+
+    /* Level Up UI */
+    #level-up-ui {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.9);
+      border: 3px solid #ffd700;
+      border-radius: 15px;
+      padding: 30px;
+      display: none;
+      z-index: 100;
+    }
+
+    #level-up-ui.active {
+      display: block;
+    }
+
+    .level-up-title {
+      text-align: center;
+      color: #ffd700;
+      font-size: 28px;
+      margin-bottom: 25px;
+    }
+
+    .choices-container {
+      display: flex;
+      gap: 15px;
+    }
+
+    .choice-card {
+      width: 140px;
+      padding: 20px 15px;
+      background: rgba(255,255,255,0.1);
+      border: 2px solid #555;
+      border-radius: 10px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      color: white;
+    }
+
+    .choice-card:hover {
+      background: rgba(255,255,255,0.2);
+      border-color: #ffd700;
+      transform: translateY(-5px);
+    }
+
+    .choice-icon {
+      font-size: 36px;
+      margin-bottom: 10px;
+    }
+
+    .choice-name {
+      font-size: 14px;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+
+    .choice-desc {
+      font-size: 12px;
+      color: #aaa;
+    }
+
+    /* Game Over UI */
+    #game-over-ui {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.95);
+      border: 3px solid #ff4757;
+      border-radius: 15px;
+      padding: 40px;
+      text-align: center;
+      display: none;
+      z-index: 100;
+    }
+
+    #game-over-ui.active {
+      display: block;
+    }
+
+    .game-over-title {
+      color: #ff4757;
+      font-size: 36px;
+      margin-bottom: 20px;
+    }
+
+    .result-stats {
+      color: white;
+      margin-bottom: 30px;
+    }
+
+    .result-stats p {
+      font-size: 18px;
+      margin: 10px 0;
+    }
+
+    .restart-btn {
+      background: #ff4757;
+      color: white;
+      border: none;
+      padding: 15px 40px;
+      font-size: 18px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .restart-btn:hover {
+      background: #ff6b81;
+    }
+
+    /* Lobby UI */
+    #lobby-ui {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, #1a1a2e, #16213e);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+    }
+
+    #lobby-ui.hidden {
+      display: none;
+    }
+
+    .lobby-title {
+      font-size: 48px;
+      color: #ffd700;
+      text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+      margin-bottom: 40px;
+    }
+
+    .lobby-stats {
+      display: flex;
+      gap: 30px;
+      margin-bottom: 40px;
+      color: white;
+    }
+
+    .lobby-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .lobby-btn {
+      padding: 15px 50px;
+      font-size: 18px;
+      border: 2px solid #555;
+      background: rgba(255,255,255,0.1);
+      color: white;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .lobby-btn:hover {
+      background: rgba(255,255,255,0.2);
+      border-color: #ffd700;
+    }
+
+    .lobby-btn.start-btn {
+      background: linear-gradient(to right, #2ed573, #7bed9f);
+      border: none;
+      color: #1a1a2e;
+      font-weight: bold;
+    }
+
+    .lobby-btn.start-btn:hover {
+      transform: scale(1.05);
+    }
+
+    /* Skills HUD */
+    #skills-hud {
+      position: absolute;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .skill-slot {
+      width: 60px;
+      height: 60px;
+      background: rgba(0,0,0,0.7);
+      border: 2px solid #555;
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: white;
+    }
+
+    .skill-slot .key {
+      font-size: 12px;
+      color: #aaa;
+    }
+
+    .skill-slot .icon {
+      font-size: 24px;
+    }
+
+    .skill-slot .cooldown {
+      font-size: 10px;
+      color: #ff4757;
+    }
+
+    .skill-slot.ready {
+      border-color: #2ed573;
+    }
+  </style>
+</head>
+<body>
+  <div id="game-container">
+    <!-- Lobby UI -->
+    <div id="lobby-ui">
+      <h1 class="lobby-title">VOXEL SURVIVOR</h1>
+      <div class="lobby-stats">
+        <div class="stat-box">Coins: <span id="lobby-coins">0</span></div>
+        <div class="stat-box">Lv.<span id="lobby-level">1</span></div>
+      </div>
+      <div class="lobby-buttons">
+        <button class="lobby-btn start-btn" id="start-game-btn">Start Game</button>
+        <button class="lobby-btn" id="upgrades-btn">Upgrades</button>
+      </div>
+    </div>
+
+    <!-- HUD -->
+    <div id="hud" style="display: none;">
+      <div class="hud-left">
+        <div class="stat-box">
+          <span>HP</span>
+          <div class="hp-bar">
+            <div class="hp-fill" id="hp-fill" style="width: 100%"></div>
+          </div>
+          <span id="hp-text">100/100</span>
+        </div>
+        <div class="stat-box">
+          <span>Lv.<span id="level-text">1</span></span>
+          <div class="exp-bar">
+            <div class="exp-fill" id="exp-fill" style="width: 0%"></div>
+          </div>
+        </div>
+      </div>
+      <div class="hud-center">
+        <div class="day-display">Day <span id="day-text">1</span></div>
+        <div class="timer-display" id="timer-text">1:00</div>
+      </div>
+      <div class="hud-right">
+        <div class="stat-box">ATK: <span id="atk-text">10</span></div>
+        <div class="stat-box">DEF: <span id="def-text">0</span></div>
+        <div class="stat-box">Coins: <span id="coins-text">0</span></div>
+      </div>
+    </div>
+
+    <!-- Skills HUD -->
+    <div id="skills-hud" style="display: none;">
+      <div class="skill-slot ready" id="skill-q">
+        <span class="key">Q</span>
+        <span class="icon">Spin</span>
+        <span class="cooldown"></span>
+      </div>
+      <div class="skill-slot ready" id="skill-shift">
+        <span class="key">Shift</span>
+        <span class="icon">Dash</span>
+        <span class="cooldown"></span>
+      </div>
+    </div>
+
+    <!-- Level Up UI -->
+    <div id="level-up-ui">
+      <h2 class="level-up-title">LEVEL UP!</h2>
+      <div class="choices-container" id="choices-container">
+      </div>
+    </div>
+
+    <!-- Game Over UI -->
+    <div id="game-over-ui">
+      <h2 class="game-over-title">GAME OVER</h2>
+      <div class="result-stats">
+        <p>Survived: Day <span id="result-day">1</span></p>
+        <p>Level Reached: <span id="result-level">1</span></p>
+        <p>Monsters Killed: <span id="result-kills">0</span></p>
+        <p>Coins Earned: <span id="result-coins">0</span></p>
+      </div>
+      <button class="restart-btn" id="restart-btn">Return to Lobby</button>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
