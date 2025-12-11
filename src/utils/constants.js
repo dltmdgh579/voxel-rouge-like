@@ -224,12 +224,162 @@ export const SKILLS = {
   },
 };
 
-// Passive skills
-export const PASSIVES = {
-  lifesteal: { name: 'Lifesteal', effect: 'heal on hit', value: 0.05 },
-  thorns: { name: 'Thorns', effect: 'reflect damage', value: 0.1 },
-  expBoost: { name: 'EXP Boost', effect: 'exp multiplier', value: 0.2 },
-  luck: { name: 'Luck', effect: 'drop rate', value: 0.15 },
+// Auto Skills - Automatically triggered skills
+export const AUTO_SKILLS = {
+  orbital: {
+    id: 'orbital',
+    name: 'Orbital',
+    desc: 'Rotating orbs that damage enemies on contact',
+    icon: '🔮',
+    category: 'Auto Skill',
+    damage: 8,
+    count: 2, // number of orbs
+    radius: 2.5, // orbit radius
+    speed: 2, // rotation speed
+    color: 0x74b9ff,
+  },
+  fireball: {
+    id: 'fireball',
+    name: 'Fireball',
+    desc: 'Shoots fireballs at nearest enemy every 3s',
+    icon: '🔥',
+    category: 'Auto Skill',
+    damage: 15,
+    cooldown: 3,
+    speed: 12,
+    color: 0xff6b6b,
+  },
+  lightning: {
+    id: 'lightning',
+    name: 'Lightning',
+    desc: 'Strikes random enemy with chain lightning',
+    icon: '⚡',
+    category: 'Auto Skill',
+    damage: 20,
+    cooldown: 4,
+    chainCount: 3, // hits up to 3 enemies
+    chainRange: 5,
+    color: 0xf1c40f,
+  },
+  poisonAura: {
+    id: 'poisonAura',
+    name: 'Poison Aura',
+    desc: 'Poisons nearby enemies over time',
+    icon: '☠️',
+    category: 'Auto Skill',
+    damage: 3, // per tick
+    tickRate: 0.5, // seconds
+    radius: 4,
+    color: 0x2ed573,
+  },
+  frostNova: {
+    id: 'frostNova',
+    name: 'Frost Nova',
+    desc: 'Freezes and damages nearby enemies',
+    icon: '❄️',
+    category: 'Auto Skill',
+    damage: 12,
+    cooldown: 5,
+    radius: 5,
+    slowAmount: 0.5, // 50% slow
+    slowDuration: 2,
+    color: 0x74b9ff,
+  },
+  spinningBlades: {
+    id: 'spinningBlades',
+    name: 'Spinning Blades',
+    desc: 'Blades orbit around you dealing damage',
+    icon: '🗡️',
+    category: 'Auto Skill',
+    damage: 6,
+    count: 3,
+    radius: 3.5,
+    speed: 3,
+    color: 0xbdc3c7,
+  },
+};
+
+// Passive Skills - Always active effects
+export const PASSIVE_SKILLS = {
+  lifesteal: {
+    id: 'lifesteal',
+    name: 'Lifesteal',
+    desc: 'Heal 5% of damage dealt',
+    icon: '🧛',
+    category: 'Passive',
+    value: 0.05,
+  },
+  thorns: {
+    id: 'thorns',
+    name: 'Thorns',
+    desc: 'Reflect 20% damage to attackers',
+    icon: '🌵',
+    category: 'Passive',
+    value: 0.2,
+  },
+  magnet: {
+    id: 'magnet',
+    name: 'Magnet',
+    desc: 'Increase pickup range by 50%',
+    icon: '🧲',
+    category: 'Passive',
+    value: 1.5, // multiplier
+  },
+  regeneration: {
+    id: 'regeneration',
+    name: 'Regeneration',
+    desc: 'Recover 1 HP per second',
+    icon: '💗',
+    category: 'Passive',
+    value: 1,
+  },
+  luck: {
+    id: 'luck',
+    name: 'Luck',
+    desc: 'Increase critical rate by 10%',
+    icon: '🍀',
+    category: 'Passive',
+    value: 0.1,
+  },
+  berserk: {
+    id: 'berserk',
+    name: 'Berserk',
+    desc: 'ATK +30% when HP below 50%',
+    icon: '😡',
+    category: 'Passive',
+    threshold: 0.5,
+    value: 0.3,
+  },
+};
+
+// Skill Upgrades - Enhance existing skills
+export const SKILL_UPGRADES = {
+  spinMaster: {
+    id: 'spinMaster',
+    name: 'Spin Master',
+    desc: 'Spin Attack: Range +1, Damage +20%',
+    icon: '🌀',
+    category: 'Upgrade',
+    target: 'spinAttack',
+    effects: { radiusBonus: 1, damageBonus: 0.2 },
+  },
+  dashMaster: {
+    id: 'dashMaster',
+    name: 'Dash Master',
+    desc: 'Dash: Cooldown -2s, Distance +2',
+    icon: '💨',
+    category: 'Upgrade',
+    target: 'dash',
+    effects: { cooldownReduction: 2, distanceBonus: 2 },
+  },
+  multiStrike: {
+    id: 'multiStrike',
+    name: 'Multi Strike',
+    desc: 'Basic attacks hit twice',
+    icon: '⚔️',
+    category: 'Upgrade',
+    effects: { attackCount: 2 },
+  },
 };
 
 // Level up choices categories

@@ -157,6 +157,12 @@ export class UIManager {
   }
 
   getChoiceIcon(choice) {
+    // New skills already have emoji icons in their data
+    if (choice.icon && choice.icon.length <= 2) {
+      return choice.icon;
+    }
+
+    // Fallback for old-style icon names
     const icons = {
       'ATK': '⚔️',
       'DEF': '🛡️',

@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { useGameStore } from '../store/gameStore.js';
-import { GAME_CONFIG, COLORS, SKILLS } from '../utils/constants.js';
+import { GAME_CONFIG, COLORS, SKILLS, PASSIVE_SKILLS, SKILL_UPGRADES } from '../utils/constants.js';
 
 export class Player {
   constructor(scene, game) {
@@ -139,38 +139,65 @@ export class Player {
   attack() {
     if (this.attackTimer > 0) return;
 
-    const stats = useGameStore.getState().run.stats;
+    const state = useGameStore.getState();
+    const stats = state.run.stats;
+    const passives = state.run.passives;
+    const upgrades = state.run.skillUpgrades;
+
     this.attackTimer = GAME_CONFIG.ATTACK_COOLDOWN;
 
     // Show attack effect
     this.showAttackEffect();
 
+    // Multi-strike: attack twice
+    const attackCount = upgrades.multiStrike ? SKILL_UPGRADES.multiStrike.effects.attackCount : 1;
+
     // Check for monster hits
     const monsters = this.game.monsterManager.monsters;
     const playerPos = this.mesh.position;
 
-    for (const monster of monsters) {
-      const dist = playerPos.distanceTo(monster.mesh.position);
+    let totalDamageDealt = 0;
 
-      if (dist < GAME_CONFIG.ATTACK_RANGE) {
-        // Check if monster is in attack direction (180 degree arc)
-        const toMonster = new THREE.Vector3()
-          .subVectors(monster.mesh.position, playerPos)
-          .normalize();
-        const dot = this.direction.dot(toMonster);
+    for (let strike = 0; strike < attackCount; strike++) {
+      for (const monster of monsters) {
+        if (monster.dead) continue;
+        const dist = playerPos.distanceTo(monster.mesh.position);
 
-        if (dot > 0 || dist < 1.5) {
-          // Calculate damage
-          let damage = stats.atk;
+        if (dist < GAME_CONFIG.ATTACK_RANGE) {
+          // Check if monster is in attack direction (180 degree arc)
+          const toMonster = new THREE.Vector3()
+            .subVectors(monster.mesh.position, playerPos)
+            .normalize();
+          const dot = this.direction.dot(toMonster);
 
-          // Crit check
-          if (Math.random() < stats.crit) {
-            damage *= stats.critDmg;
+          if (dot > 0 || dist < 1.5) {
+            // Calculate damage
+            let damage = stats.atk;
+
+            // Berserk: +30% ATK when HP below 50%
+            if (passives.includes('berserk')) {
+              const hpPercent = stats.hp / stats.maxHp;
+              if (hpPercent < PASSIVE_SKILLS.berserk.threshold) {
+                damage *= (1 + PASSIVE_SKILLS.berserk.value);
+              }
+            }
+
+            // Crit check
+            if (Math.random() < stats.crit) {
+              damage *= stats.critDmg;
+            }
+
+            monster.takeDamage(damage);
+            totalDamageDealt += damage;
           }
-
-          monster.takeDamage(damage);
         }
       }
+    }
+
+    // Lifesteal: heal 5% of damage dealt
+    if (passives.includes('lifesteal') && totalDamageDealt > 0) {
+      const healAmount = totalDamageDealt * PASSIVE_SKILLS.lifesteal.value;
+      useGameStore.getState().heal(healAmount);
     }
 
     // Animate weapon swing
@@ -219,13 +246,20 @@ export class Player {
     if (state.gameState !== 'playing') return;
 
     const cooldowns = state.run.skillCooldowns;
+    const upgrades = state.run.skillUpgrades;
     const skill = SKILLS[skillName];
 
     if (!skill) return;
     if (cooldowns[skillName] && cooldowns[skillName] > 0) return;
 
+    // Calculate cooldown with upgrades
+    let cooldown = skill.cooldown;
+    if (skillName === 'dash' && upgrades.dashMaster) {
+      cooldown -= SKILL_UPGRADES.dashMaster.effects.cooldownReduction;
+    }
+
     // Set cooldown
-    state.setSkillCooldown(skillName, skill.cooldown);
+    state.setSkillCooldown(skillName, cooldown);
 
     // Execute skill
     if (skillName === 'spinAttack') {
@@ -237,14 +271,34 @@ export class Player {
 
   spinAttack() {
     const skill = SKILLS.spinAttack;
-    const stats = useGameStore.getState().run.stats;
-    const damage = stats.atk * skill.damage;
+    const state = useGameStore.getState();
+    const stats = state.run.stats;
+    const upgrades = state.run.skillUpgrades;
+    const passives = state.run.passives;
+
+    // Apply spinMaster upgrade
+    let radius = skill.radius;
+    let damageMultiplier = skill.damage;
+    if (upgrades.spinMaster) {
+      radius += SKILL_UPGRADES.spinMaster.effects.radiusBonus;
+      damageMultiplier *= (1 + SKILL_UPGRADES.spinMaster.effects.damageBonus);
+    }
+
+    let damage = stats.atk * damageMultiplier;
+
+    // Berserk bonus
+    if (passives.includes('berserk')) {
+      const hpPercent = stats.hp / stats.maxHp;
+      if (hpPercent < PASSIVE_SKILLS.berserk.threshold) {
+        damage *= (1 + PASSIVE_SKILLS.berserk.value);
+      }
+    }
 
     // Show spin effect - no scaling, just fade out
     this.spinAttackMesh.position.copy(this.mesh.position);
     this.spinAttackMesh.position.y = 0.5;
     this.spinAttackMesh.visible = true;
-    this.spinAttackMesh.scale.set(1, 1, 1);
+    this.spinAttackMesh.scale.set(radius / skill.radius, radius / skill.radius, radius / skill.radius);
     this.spinAttackMesh.material.opacity = 0.6;
 
     // Animate fade out only (no scale change to match actual range)
@@ -268,23 +322,37 @@ export class Player {
     // Damage all monsters in radius
     const monsters = this.game.monsterManager.monsters;
     const playerPos = this.mesh.position;
+    let totalDamageDealt = 0;
 
     for (const monster of monsters) {
+      if (monster.dead) continue;
       const dist = playerPos.distanceTo(monster.mesh.position);
-      if (dist < skill.radius) {
+      if (dist < radius) {
         monster.takeDamage(damage);
+        totalDamageDealt += damage;
       }
+    }
+
+    // Lifesteal
+    if (passives.includes('lifesteal') && totalDamageDealt > 0) {
+      const healAmount = totalDamageDealt * PASSIVE_SKILLS.lifesteal.value;
+      useGameStore.getState().heal(healAmount);
     }
   }
 
   dash() {
     const skill = SKILLS.dash;
+    const upgrades = useGameStore.getState().run.skillUpgrades;
 
     // Make invincible during dash
     this.invincible = true;
 
-    // Calculate dash target
-    const dashDistance = skill.distance;
+    // Apply dashMaster upgrade
+    let dashDistance = skill.distance;
+    if (upgrades.dashMaster) {
+      dashDistance += SKILL_UPGRADES.dashMaster.effects.distanceBonus;
+    }
+
     const startPos = this.mesh.position.clone();
     const endPos = startPos.clone().add(this.direction.clone().multiplyScalar(dashDistance));
 

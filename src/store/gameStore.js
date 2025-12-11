@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { BASE_STATS, LEVEL_EXP } from '../utils/constants.js';
+import { BASE_STATS, LEVEL_EXP, AUTO_SKILLS, PASSIVE_SKILLS, SKILL_UPGRADES } from '../utils/constants.js';
 
 // Load saved account data from localStorage
 const loadAccountData = () => {
@@ -50,6 +50,9 @@ export const useGameStore = create((set, get) => ({
     items: [],
     skills: ['spinAttack', 'dash'],
     skillCooldowns: {},
+    autoSkills: [], // Active auto skills (e.g., ['orbital', 'fireball'])
+    passives: [], // Active passive skills (e.g., ['lifesteal', 'thorns'])
+    skillUpgrades: {}, // Skill upgrade levels (e.g., { spinMaster: true })
     kills: 0,
     coinsEarned: 0,
   },
@@ -92,6 +95,9 @@ export const useGameStore = create((set, get) => ({
         items: [],
         skills: ['spinAttack', 'dash'],
         skillCooldowns: {},
+        autoSkills: [],
+        passives: [],
+        skillUpgrades: {},
         kills: 0,
         coinsEarned: 0,
       },
@@ -235,31 +241,64 @@ export const useGameStore = create((set, get) => ({
   showLevelUpChoices: () => {
     const { run } = get();
 
-    // Generate 3 random choices
-    const choices = [];
+    // Build available choices based on what player doesn't have
+    const availableChoices = [];
 
-    // All possible choices with categories
-    const allOptions = [
-      // Stats
-      { type: 'stat', category: 'Stat Boost', icon: 'ATK', name: 'Power Strike', desc: 'ATK +5', effect: { atk: 5 } },
-      { type: 'stat', category: 'Stat Boost', icon: 'DEF', name: 'Iron Skin', desc: 'DEF +3', effect: { def: 3 } },
-      { type: 'stat', category: 'Stat Boost', icon: 'HP', name: 'Vitality', desc: 'Max HP +20', effect: { maxHp: 20 } },
-      { type: 'stat', category: 'Stat Boost', icon: 'SPD', name: 'Swift Foot', desc: 'Speed +10%', effect: { spd: 0.1 } },
-      { type: 'stat', category: 'Stat Boost', icon: 'CRIT', name: 'Precision', desc: 'Crit Rate +5%', effect: { crit: 0.05 } },
-      // Items
-      { type: 'item', category: 'Equipment', icon: 'Sword', name: 'Sharp Blade', desc: 'ATK +10', effect: { atk: 10 } },
-      { type: 'item', category: 'Equipment', icon: 'Shield', name: 'Steel Shield', desc: 'DEF +8', effect: { def: 8 } },
-      { type: 'item', category: 'Equipment', icon: 'Ring', name: 'Crit Ring', desc: 'Crit Rate +8%', effect: { crit: 0.08 } },
-      { type: 'item', category: 'Equipment', icon: 'Boots', name: 'Wind Boots', desc: 'Speed +15%', effect: { spd: 0.15 } },
-      // Skills
-      { type: 'skill', category: 'Skill', icon: 'Heal', name: 'Recovery', desc: 'Heal +20% boost', effect: 'healBoost' },
-      { type: 'skill', category: 'Skill', icon: 'Spin', name: 'Whirlwind', desc: 'Spin Range +1', effect: 'spinRange' },
-      { type: 'skill', category: 'Skill', icon: 'Dash', name: 'Quick Step', desc: 'Dash CD -1s', effect: 'dashCooldown' },
-    ];
+    // Add auto skills that player doesn't have
+    Object.values(AUTO_SKILLS).forEach(skill => {
+      if (!run.autoSkills.includes(skill.id)) {
+        availableChoices.push({
+          type: 'autoSkill',
+          id: skill.id,
+          category: skill.category,
+          icon: skill.icon,
+          name: skill.name,
+          desc: skill.desc,
+        });
+      }
+    });
+
+    // Add passive skills that player doesn't have
+    Object.values(PASSIVE_SKILLS).forEach(skill => {
+      if (!run.passives.includes(skill.id)) {
+        availableChoices.push({
+          type: 'passive',
+          id: skill.id,
+          category: skill.category,
+          icon: skill.icon,
+          name: skill.name,
+          desc: skill.desc,
+        });
+      }
+    });
+
+    // Add skill upgrades that player doesn't have
+    Object.values(SKILL_UPGRADES).forEach(upgrade => {
+      if (!run.skillUpgrades[upgrade.id]) {
+        availableChoices.push({
+          type: 'upgrade',
+          id: upgrade.id,
+          category: upgrade.category,
+          icon: upgrade.icon,
+          name: upgrade.name,
+          desc: upgrade.desc,
+        });
+      }
+    });
 
     // Shuffle and pick 3 unique choices
-    const shuffled = [...allOptions].sort(() => Math.random() - 0.5);
-    choices.push(shuffled[0], shuffled[1], shuffled[2]);
+    const shuffled = [...availableChoices].sort(() => Math.random() - 0.5);
+    const choices = shuffled.slice(0, 3);
+
+    // If we don't have enough choices, add some stat boosts
+    while (choices.length < 3) {
+      const statBoosts = [
+        { type: 'stat', category: 'Stat Boost', icon: '⚔️', name: 'Power Up', desc: 'ATK +5', effect: { atk: 5 } },
+        { type: 'stat', category: 'Stat Boost', icon: '🛡️', name: 'Toughness', desc: 'DEF +3', effect: { def: 3 } },
+        { type: 'stat', category: 'Stat Boost', icon: '❤️', name: 'Vitality', desc: 'Max HP +25', effect: { maxHp: 25 } },
+      ];
+      choices.push(statBoosts[choices.length % statBoosts.length]);
+    }
 
     set({
       gameState: 'levelup',
@@ -271,29 +310,48 @@ export const useGameStore = create((set, get) => ({
   selectLevelUpChoice: (choice) => {
     const { run } = get();
 
-    let newStats = { ...run.stats };
+    let newRun = { ...run };
 
-    if (choice.type === 'stat' || choice.type === 'item') {
-      Object.keys(choice.effect).forEach(key => {
-        if (newStats[key] !== undefined) {
-          newStats[key] += choice.effect[key];
+    switch (choice.type) {
+      case 'autoSkill':
+        // Add new auto skill
+        newRun.autoSkills = [...run.autoSkills, choice.id];
+        break;
+
+      case 'passive':
+        // Add new passive skill
+        newRun.passives = [...run.passives, choice.id];
+        // Apply immediate effects for some passives
+        if (choice.id === 'luck') {
+          newRun.stats = { ...run.stats, crit: run.stats.crit + PASSIVE_SKILLS.luck.value };
         }
-      });
+        break;
 
-      // If maxHp increased, also increase current hp
-      if (choice.effect.maxHp) {
-        newStats.hp += choice.effect.maxHp;
-      }
+      case 'upgrade':
+        // Add skill upgrade
+        newRun.skillUpgrades = { ...run.skillUpgrades, [choice.id]: true };
+        break;
+
+      case 'stat':
+        // Apply stat boost
+        const newStats = { ...run.stats };
+        Object.keys(choice.effect).forEach(key => {
+          if (newStats[key] !== undefined) {
+            newStats[key] += choice.effect[key];
+          }
+        });
+        if (choice.effect.maxHp) {
+          newStats.hp += choice.effect.maxHp;
+        }
+        newRun.stats = newStats;
+        break;
     }
 
     set({
       gameState: 'playing',
       showLevelUp: false,
       levelUpChoices: [],
-      run: {
-        ...run,
-        stats: newStats,
-      },
+      run: newRun,
     });
   },
 

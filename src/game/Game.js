@@ -4,8 +4,9 @@ import { Player } from './Player.js';
 import { MonsterManager } from './Monster.js';
 import { VoxelMap } from '../world/Map.js';
 import { ArtifactManager } from './Artifact.js';
+import { AutoSkillManager } from './AutoSkillManager.js';
 import { UIManager } from '../ui/HUD.js';
-import { GAME_CONFIG } from '../utils/constants.js';
+import { GAME_CONFIG, PASSIVE_SKILLS } from '../utils/constants.js';
 
 export class Game {
   constructor() {
@@ -18,6 +19,7 @@ export class Game {
     this.map = null;
     this.monsterManager = null;
     this.artifactManager = null;
+    this.autoSkillManager = null;
     this.uiManager = null;
 
     this.keys = {};
@@ -59,6 +61,7 @@ export class Game {
     // Create managers
     this.monsterManager = new MonsterManager(this.scene, this);
     this.artifactManager = new ArtifactManager(this.scene, this);
+    this.autoSkillManager = new AutoSkillManager(this.scene, this);
     this.uiManager = new UIManager(this);
 
     // Event listeners
@@ -170,6 +173,9 @@ export class Game {
       // Update artifacts
       this.artifactManager.update(delta);
 
+      // Update auto skills
+      this.autoSkillManager.update(delta);
+
       // Check collisions
       this.checkCollisions();
     }
@@ -212,19 +218,28 @@ export class Game {
   }
 
   checkCollisions() {
-    const gameState = useGameStore.getState().gameState;
-    if (gameState !== 'playing') return;
+    const state = useGameStore.getState();
+    if (state.gameState !== 'playing') return;
+
+    const passives = state.run.passives;
 
     // Player vs Monsters
     const playerPos = this.player.mesh.position;
     const monsters = this.monsterManager.monsters;
 
     for (const monster of monsters) {
+      if (monster.dead) continue;
       const dist = playerPos.distanceTo(monster.mesh.position);
       if (dist < 1.5 && !this.player.invincible) {
         // Monster damages player
         const damage = useGameStore.getState().takeDamage(monster.stats.atk);
         this.player.onHit();
+
+        // Thorns: reflect 20% damage back to monster
+        if (passives.includes('thorns')) {
+          const reflectDamage = damage * PASSIVE_SKILLS.thorns.value;
+          monster.takeDamage(reflectDamage);
+        }
 
         // Knockback
         const dir = new THREE.Vector3()
@@ -248,6 +263,7 @@ export class Game {
     // Clear existing entities
     this.monsterManager.clearAll();
     this.artifactManager.clearAll();
+    this.autoSkillManager.clearAll();
 
     // Reset player position
     this.player.reset();
