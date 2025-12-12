@@ -745,12 +745,14 @@ export class UIManager {
     const stats = [];
 
     const addStat = (icon, name, value, suffix = '') => {
-      if (value > 0 || value === true) {
+      if (value !== 0 && value !== false) {
+        const displayValue = typeof value === 'boolean' ? '✓' : (value > 0 ? '+' + value + suffix : value + suffix);
+        const color = value < 0 ? '#74b9ff' : '#7bed9f'; // Blue for reductions, green for bonuses
         stats.push(`
           <div style="background: rgba(255,255,255,0.05); padding: 8px 15px; border-radius: 6px; display: flex; align-items: center; gap: 8px;">
             <span style="font-size: 18px;">${icon}</span>
             <span style="color: #a0aab4;">${name}:</span>
-            <span style="color: #7bed9f; font-weight: bold;">${typeof value === 'boolean' ? '✓' : ('+' + value + suffix)}</span>
+            <span style="color: ${color}; font-weight: bold;">${displayValue}</span>
           </div>
         `);
       }
@@ -759,29 +761,78 @@ export class UIManager {
     // Calculate total bonuses
     let hpBonus = 0, atkBonus = 0, defBonus = 0, spdBonus = 0, critBonus = 0;
     let coinBonus = 0, expBonus = 0;
+    let attackSpeedBonus = 0, dashCooldownBonus = 0, spinRadiusBonus = 0;
+    let dayTimeReduction = 0, spawnRateBonus = 0;
+    let startHeal = 0, earlyDamageBonus = 0, startLifesteal = 0;
+    let explosionChance = 0, rareDropBonus = 0;
+    let hasRevival = false;
 
-    Object.keys(upgrades).forEach(id => {
+    Object.keys(upgrades || {}).forEach(id => {
       const level = upgrades[id] || 0;
       const upgrade = PERMANENT_UPGRADES[id];
       if (!upgrade || level === 0) return;
 
       const effect = upgrade.effect;
+      // Stats
       if (effect.hp) hpBonus += effect.hp * level;
       if (effect.atk) atkBonus += effect.atk * level;
       if (effect.def) defBonus += effect.def * level;
       if (effect.spd) spdBonus += Math.round(effect.spd * level * 100);
       if (effect.crit) critBonus += Math.round(effect.crit * level * 100);
+
+      // Economy & Growth
       if (effect.coinBonus) coinBonus += Math.round(effect.coinBonus * level * 100);
       if (effect.expBonus) expBonus += Math.round(effect.expBonus * level * 100);
+      if (effect.rareDropBonus) rareDropBonus += Math.round(effect.rareDropBonus * level * 100);
+
+      // Combat & Skills
+      if (effect.attackSpeed) attackSpeedBonus += Math.round(effect.attackSpeed * level * 100);
+      if (effect.dashCooldown) dashCooldownBonus += effect.dashCooldown * level;
+      if (effect.spinRadius) spinRadiusBonus += effect.spinRadius * level;
+
+      // Survival
+      if (effect.dayTimeReduction) dayTimeReduction += effect.dayTimeReduction * level;
+      if (effect.spawnRateBonus) spawnRateBonus += Math.round(effect.spawnRateBonus * level * 100);
+      if (effect.revival) hasRevival = true;
+
+      // Starting Bonus
+      if (effect.startHeal) startHeal += effect.startHeal * level;
+      if (effect.earlyDamage) earlyDamageBonus += Math.round(effect.earlyDamage * level * 100);
+      if (effect.startLifesteal) startLifesteal += Math.round(effect.startLifesteal * level * 100);
+
+      // Special
+      if (effect.explosionChance) explosionChance += Math.round(effect.explosionChance * level * 100);
     });
 
+    // Stats
     addStat('❤️', 'HP', hpBonus);
     addStat('⚔️', 'ATK', atkBonus);
     addStat('🛡️', 'DEF', defBonus);
     addStat('👟', 'Speed', spdBonus, '%');
-    addStat('🎯', 'Crit', critBonus, '%');
-    addStat('🧲', 'Coins', coinBonus, '%');
-    addStat('📚', 'EXP', expBonus, '%');
+    addStat('🎯', 'Crit Rate', critBonus, '%');
+
+    // Combat & Skills
+    addStat('⚡', 'Attack Speed', attackSpeedBonus, '%');
+    addStat('💨', 'Dash CD', dashCooldownBonus, 's');
+    addStat('🌀', 'Spin Radius', spinRadiusBonus);
+
+    // Economy & Growth
+    addStat('🧲', 'Coin Drop', coinBonus, '%');
+    addStat('📚', 'EXP Gain', expBonus, '%');
+    addStat('💎', 'Rare Drop', rareDropBonus, '%');
+    addStat('👹', 'Spawn Rate', spawnRateBonus, '%');
+
+    // Survival
+    addStat('⏱️', 'Day Time', -dayTimeReduction, 's');
+    if (hasRevival) addStat('👼', 'Revival', true);
+
+    // Starting Bonus
+    addStat('🩹', 'Start Heal', startHeal);
+    addStat('💪', 'Early DMG', earlyDamageBonus, '%');
+    addStat('🧛', 'Start Lifesteal', startLifesteal, '%');
+
+    // Special
+    addStat('💥', 'Explode Chance', explosionChance, '%');
 
     if (stats.length === 0) {
       return '<div style="color: #666;">No upgrades purchased yet</div>';
