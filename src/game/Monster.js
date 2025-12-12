@@ -210,7 +210,7 @@ class Monster {
     this.scene.add(this.mesh);
   }
 
-  update(delta, playerPos) {
+  update(delta, playerPos, map) {
     if (this.dead) return;
 
     // Move towards player
@@ -218,8 +218,21 @@ class Monster {
       .subVectors(playerPos, this.mesh.position)
       .normalize();
 
-    this.mesh.position.x += direction.x * this.stats.speed * delta;
-    this.mesh.position.z += direction.z * this.stats.speed * delta;
+    // Calculate new position
+    let newX = this.mesh.position.x + direction.x * this.stats.speed * delta;
+    let newZ = this.mesh.position.z + direction.z * this.stats.speed * delta;
+
+    // Check collision with obstacles
+    if (map) {
+      const resolved = map.resolveCollision({ x: newX, z: newZ }, 0.5);
+      if (resolved) {
+        newX = resolved.x;
+        newZ = resolved.z;
+      }
+    }
+
+    this.mesh.position.x = newX;
+    this.mesh.position.z = newZ;
 
     // Face player
     this.mesh.rotation.y = Math.atan2(direction.x, direction.z);
@@ -393,8 +406,9 @@ export class MonsterManager {
     this.lastDay = currentDay;
 
     // Update monsters
+    const map = this.game.map;
     for (const monster of this.monsters) {
-      monster.update(delta, playerPos);
+      monster.update(delta, playerPos, map);
     }
 
     // Remove dead monsters from array
@@ -431,19 +445,37 @@ export class MonsterManager {
 
   getSpawnPosition() {
     const playerPos = this.game.player.mesh.position;
+    const map = this.game.map;
+    const half = GAME_CONFIG.MAP_SIZE / 2 - 1;
+
+    // Try up to 10 times to find a valid spawn position
+    for (let attempt = 0; attempt < 10; attempt++) {
+      const angle = Math.random() * Math.PI * 2;
+      const distance = GAME_CONFIG.SPAWN_DISTANCE_MIN +
+        Math.random() * (GAME_CONFIG.SPAWN_DISTANCE_MAX - GAME_CONFIG.SPAWN_DISTANCE_MIN);
+
+      const x = playerPos.x + Math.cos(angle) * distance;
+      const z = playerPos.z + Math.sin(angle) * distance;
+
+      // Clamp to map
+      const clampedX = Math.max(-half, Math.min(half, x));
+      const clampedZ = Math.max(-half, Math.min(half, z));
+
+      // Check if position is clear of obstacles
+      if (map && !map.checkCollision({ x: clampedX, z: clampedZ }, 0.8)) {
+        return new THREE.Vector3(clampedX, 0, clampedZ);
+      }
+    }
+
+    // Fallback: return position anyway (monster will be pushed out)
     const angle = Math.random() * Math.PI * 2;
     const distance = GAME_CONFIG.SPAWN_DISTANCE_MIN +
       Math.random() * (GAME_CONFIG.SPAWN_DISTANCE_MAX - GAME_CONFIG.SPAWN_DISTANCE_MIN);
 
-    const x = playerPos.x + Math.cos(angle) * distance;
-    const z = playerPos.z + Math.sin(angle) * distance;
-
-    // Clamp to map
-    const half = GAME_CONFIG.MAP_SIZE / 2 - 1;
     return new THREE.Vector3(
-      Math.max(-half, Math.min(half, x)),
+      Math.max(-half, Math.min(half, playerPos.x + Math.cos(angle) * distance)),
       0,
-      Math.max(-half, Math.min(half, z))
+      Math.max(-half, Math.min(half, playerPos.z + Math.sin(angle) * distance))
     );
   }
 

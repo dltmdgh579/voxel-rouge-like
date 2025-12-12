@@ -6,9 +6,57 @@ export class VoxelMap {
     this.scene = scene;
     this.groundMesh = null;
     this.decorations = [];
+    this.obstacles = []; // Collision objects (trees, rocks)
 
     this.createGround();
     this.createDecorations();
+  }
+
+  // Get all obstacle positions and radii for collision detection
+  getObstacles() {
+    return this.obstacles;
+  }
+
+  // Check if a position collides with any obstacle
+  checkCollision(position, radius = 0.5) {
+    for (const obstacle of this.obstacles) {
+      const dx = position.x - obstacle.x;
+      const dz = position.z - obstacle.z;
+      const distance = Math.sqrt(dx * dx + dz * dz);
+
+      if (distance < radius + obstacle.radius) {
+        return obstacle;
+      }
+    }
+    return null;
+  }
+
+  // Get pushed-out position if collision detected
+  resolveCollision(position, radius = 0.5) {
+    const obstacle = this.checkCollision(position, radius);
+    if (!obstacle) return null;
+
+    const dx = position.x - obstacle.x;
+    const dz = position.z - obstacle.z;
+    const distance = Math.sqrt(dx * dx + dz * dz);
+
+    if (distance === 0) {
+      // Directly on top of obstacle, push in random direction
+      return {
+        x: position.x + (Math.random() - 0.5) * 0.5,
+        z: position.z + (Math.random() - 0.5) * 0.5
+      };
+    }
+
+    // Push out in the direction away from obstacle center
+    const overlap = radius + obstacle.radius - distance;
+    const pushX = (dx / distance) * overlap;
+    const pushZ = (dz / distance) * overlap;
+
+    return {
+      x: position.x + pushX,
+      z: position.z + pushZ
+    };
   }
 
   createGround() {
@@ -200,6 +248,14 @@ export class VoxelMap {
 
     this.scene.add(group);
     this.decorations.push(group);
+
+    // Add to obstacles for collision (trunk radius)
+    this.obstacles.push({
+      x: x,
+      z: z,
+      radius: 0.5 * scale, // Trunk collision radius
+      type: 'tree'
+    });
   }
 
   createRock(x, z) {
@@ -247,6 +303,14 @@ export class VoxelMap {
 
     this.scene.add(group);
     this.decorations.push(group);
+
+    // Add to obstacles for collision
+    this.obstacles.push({
+      x: x,
+      z: z,
+      radius: 0.7 * scale, // Rock collision radius
+      type: 'rock'
+    });
   }
 
   createFlower(x, z) {

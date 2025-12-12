@@ -122,13 +122,30 @@ export class Player {
     const normalizedX = x / length;
     const normalizedZ = z / length;
 
-    this.mesh.position.x += normalizedX * speed * delta;
-    this.mesh.position.z += normalizedZ * speed * delta;
+    // Calculate new position
+    let newX = this.mesh.position.x + normalizedX * speed * delta;
+    let newZ = this.mesh.position.z + normalizedZ * speed * delta;
 
     // Clamp to map bounds
     const half = GAME_CONFIG.MAP_SIZE / 2 - 1;
-    this.mesh.position.x = Math.max(-half, Math.min(half, this.mesh.position.x));
-    this.mesh.position.z = Math.max(-half, Math.min(half, this.mesh.position.z));
+    newX = Math.max(-half, Math.min(half, newX));
+    newZ = Math.max(-half, Math.min(half, newZ));
+
+    // Check collision with obstacles
+    const map = this.game.map;
+    if (map) {
+      const resolved = map.resolveCollision({ x: newX, z: newZ }, 0.5);
+      if (resolved) {
+        newX = resolved.x;
+        newZ = resolved.z;
+        // Re-clamp after collision resolution
+        newX = Math.max(-half, Math.min(half, newX));
+        newZ = Math.max(-half, Math.min(half, newZ));
+      }
+    }
+
+    this.mesh.position.x = newX;
+    this.mesh.position.z = newZ;
 
     // Update direction
     if (x !== 0 || z !== 0) {
@@ -360,12 +377,31 @@ export class Player {
     }
 
     const startPos = this.mesh.position.clone();
-    const endPos = startPos.clone().add(this.direction.clone().multiplyScalar(dashDistance));
+    let endPos = startPos.clone().add(this.direction.clone().multiplyScalar(dashDistance));
 
     // Clamp to bounds
     const half = GAME_CONFIG.MAP_SIZE / 2 - 1;
     endPos.x = Math.max(-half, Math.min(half, endPos.x));
     endPos.z = Math.max(-half, Math.min(half, endPos.z));
+
+    // Check for obstacles along dash path and stop at first collision
+    const map = this.game.map;
+    if (map) {
+      const steps = 10; // Check collision at multiple points
+      for (let i = 1; i <= steps; i++) {
+        const t = i / steps;
+        const checkX = startPos.x + (endPos.x - startPos.x) * t;
+        const checkZ = startPos.z + (endPos.z - startPos.z) * t;
+
+        if (map.checkCollision({ x: checkX, z: checkZ }, 0.5)) {
+          // Stop dash just before the obstacle
+          const safeT = Math.max(0, (i - 1) / steps);
+          endPos.x = startPos.x + (endPos.x - startPos.x) * safeT;
+          endPos.z = startPos.z + (endPos.z - startPos.z) * safeT;
+          break;
+        }
+      }
+    }
 
     // Animate dash
     const startTime = performance.now();
