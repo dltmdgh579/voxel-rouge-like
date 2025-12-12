@@ -390,10 +390,17 @@ export class MonsterManager {
       this.spawnTimer += delta;
 
       // Calculate spawn interval based on day (faster spawns on later days)
-      const spawnInterval = Math.max(
+      let spawnInterval = Math.max(
         GAME_CONFIG.SPAWN_INTERVAL_MIN,
         GAME_CONFIG.SPAWN_INTERVAL_BASE - (currentDay - 2) * 0.2
       );
+
+      // Apply monster magnet upgrade (reduces spawn interval)
+      const monsterMagnetLevel = state.account?.upgrades?.monsterMagnet || 0;
+      if (monsterMagnetLevel > 0) {
+        const spawnBonus = 1 + (monsterMagnetLevel * 0.2); // 20% faster per level
+        spawnInterval = spawnInterval / spawnBonus;
+      }
 
       // Spawn monster if timer reached and under max limit
       if (this.spawnTimer >= spawnInterval && this.monsters.length < GAME_CONFIG.MAX_MONSTERS) {

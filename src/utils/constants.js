@@ -597,6 +597,17 @@ export const PERMANENT_UPGRADES = {
     costMultiplier: 1.8,
     effect: { dayTimeReduction: 3 },
   },
+  monsterMagnet: {
+    id: 'monsterMagnet',
+    name: 'Monster Magnet',
+    desc: '+20% monster spawn rate (more EXP!)',
+    icon: '👹',
+    category: 'Growth',
+    maxLevel: 5,
+    baseCost: 150,
+    costMultiplier: 1.7,
+    effect: { spawnRateBonus: 0.2 },
+  },
 };
 
 // Upgrade Categories for UI organization
