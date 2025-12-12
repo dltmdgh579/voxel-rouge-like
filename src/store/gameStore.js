@@ -205,18 +205,22 @@ export const useGameStore = create((set, get) => ({
 
   // Day system
   updateTimer: (delta) => {
-    const { run, gameState } = get();
+    const { run, gameState, account } = get();
     if (gameState !== 'playing') return;
 
     const newTimer = run.timer - delta;
 
     if (newTimer <= 0) {
+      // Calculate day duration based on timeWarp upgrade
+      const timeWarpLevel = account.upgrades?.timeWarp || 0;
+      const dayDuration = Math.max(30, 60 - (timeWarpLevel * 3)); // Min 30 seconds
+
       // Next day
       set({
         run: {
           ...run,
           day: run.day + 1,
-          timer: 60,
+          timer: dayDuration,
         },
       });
     } else {

@@ -586,6 +586,17 @@ export const PERMANENT_UPGRADES = {
     costMultiplier: 2.5,
     effect: { startLifesteal: 0.02 },
   },
+  timeWarp: {
+    id: 'timeWarp',
+    name: 'Time Warp',
+    desc: '-3 seconds per day duration',
+    icon: '⏱️',
+    category: 'Survival',
+    maxLevel: 5,
+    baseCost: 200,
+    costMultiplier: 1.8,
+    effect: { dayTimeReduction: 3 },
+  },
 };
 
 // Upgrade Categories for UI organization
