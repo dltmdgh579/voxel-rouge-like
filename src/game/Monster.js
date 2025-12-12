@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { useGameStore } from '../store/gameStore.js';
+import { audioManager } from './AudioManager.js';
 import { MONSTERS, SPAWN_RULES, GAME_CONFIG } from '../utils/constants.js';
 
 let monsterId = 0;
@@ -235,6 +236,9 @@ class Monster {
 
     this.hp -= amount;
 
+    // Play hit sound
+    audioManager.playSfx('sfx_monster_hit', { volume: 0.6, pitchVariation: 0.15 });
+
     // Update HP bar
     const hpPercent = Math.max(0, this.hp / this.maxHp);
     this.hpBar.scale.x = hpPercent;
@@ -310,6 +314,9 @@ class Monster {
 
   die() {
     this.dead = true;
+
+    // Play death sound
+    audioManager.playSfx('sfx_monster_death', { volume: 0.7, pitchVariation: 0.1 });
 
     // Rewards
     const store = useGameStore.getState();

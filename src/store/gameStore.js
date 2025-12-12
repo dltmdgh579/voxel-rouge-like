@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { audioManager } from '../game/AudioManager.js';
 import { BASE_STATS, LEVEL_EXP, AUTO_SKILLS, PASSIVE_SKILLS, SKILL_UPGRADES } from '../utils/constants.js';
 
 // Load saved account data from localStorage
@@ -68,6 +69,10 @@ export const useGameStore = create((set, get) => ({
 
   // Actions
   startGame: () => {
+    // Play game start sound and BGM
+    audioManager.playSfx('sfx_game_start');
+    audioManager.playBgm('bgm_gameplay_early', 1);
+
     const { account } = get();
     const baseStats = { ...BASE_STATS };
 
@@ -140,6 +145,8 @@ export const useGameStore = create((set, get) => ({
   },
 
   returnToLobby: () => {
+    // Play lobby BGM
+    audioManager.playBgm('bgm_lobby', 1);
     set({ gameState: 'lobby' });
   },
 
@@ -186,6 +193,10 @@ export const useGameStore = create((set, get) => ({
     });
 
     if (newHp <= 0) {
+      // Play death sound
+      audioManager.playSfx('sfx_player_death');
+      // Play game over BGM
+      audioManager.playBgm('bgm_gameover', 1);
       get().endGame();
     }
 
@@ -234,6 +245,8 @@ export const useGameStore = create((set, get) => ({
     });
 
     if (shouldLevelUp) {
+      // Play level up sound
+      audioManager.playSfx('sfx_levelup');
       get().showLevelUpChoices();
     }
   },
@@ -308,6 +321,9 @@ export const useGameStore = create((set, get) => ({
   },
 
   selectLevelUpChoice: (choice) => {
+    // Play selection sound
+    audioManager.playSfx('sfx_choice_select');
+
     const { run } = get();
 
     let newRun = { ...run };
@@ -357,6 +373,9 @@ export const useGameStore = create((set, get) => ({
 
   // Coins
   addCoins: (amount) => {
+    // Play coin sound
+    audioManager.playSfx('sfx_coin_collect', { volume: 0.5, pitchVariation: 0.1 });
+
     const { run } = get();
     set({
       run: {

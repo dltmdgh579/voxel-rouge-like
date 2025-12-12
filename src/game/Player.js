@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { useGameStore } from '../store/gameStore.js';
+import { audioManager } from './AudioManager.js';
 import { GAME_CONFIG, COLORS, SKILLS, PASSIVE_SKILLS, SKILL_UPGRADES } from '../utils/constants.js';
 
 export class Player {
@@ -146,6 +147,9 @@ export class Player {
 
     this.attackTimer = GAME_CONFIG.ATTACK_COOLDOWN;
 
+    // Play attack sound
+    audioManager.playAttack();
+
     // Show attack effect
     this.showAttackEffect();
 
@@ -263,8 +267,10 @@ export class Player {
 
     // Execute skill
     if (skillName === 'spinAttack') {
+      audioManager.playSfx('sfx_skill_spin');
       this.spinAttack();
     } else if (skillName === 'dash') {
+      audioManager.playSfx('sfx_skill_dash');
       this.dash();
     }
   }
@@ -429,6 +435,9 @@ export class Player {
   }
 
   onHit() {
+    // Play hit sound
+    audioManager.playSfx('sfx_player_hit');
+
     // Flash red
     this.mesh.traverse((child) => {
       if (child.isMesh && child.material) {

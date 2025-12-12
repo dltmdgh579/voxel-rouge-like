@@ -1,4 +1,5 @@
 import { useGameStore } from '../store/gameStore.js';
+import { audioManager } from '../game/AudioManager.js';
 import { SKILLS } from '../utils/constants.js';
 
 export class UIManager {
@@ -11,18 +12,21 @@ export class UIManager {
   setupEventListeners() {
     // Start game button
     document.getElementById('start-game-btn').addEventListener('click', () => {
+      audioManager.playSfx('sfx_ui_click');
       this.game.startNewRun();
       this.showGameUI();
     });
 
     // Restart button
     document.getElementById('restart-btn').addEventListener('click', () => {
+      audioManager.playSfx('sfx_ui_click');
       this.hideGameOver();
       this.showLobby();
     });
 
     // Upgrades button
     document.getElementById('upgrades-btn').addEventListener('click', () => {
+      audioManager.playSfx('sfx_ui_click');
       this.showUpgradesModal();
     });
   }
@@ -150,6 +154,10 @@ export class UIManager {
           levelUpUI.classList.remove('active');
           this.levelUpShown = false;
         }, 200);
+      });
+
+      card.addEventListener('mouseenter', () => {
+        audioManager.playSfx('sfx_ui_hover', { volume: 0.3 });
       });
 
       container.appendChild(card);
@@ -326,10 +334,12 @@ export class UIManager {
         const type = card.dataset.type;
         const success = useGameStore.getState().purchaseUpgrade(type);
         if (success) {
+          audioManager.playSfx('sfx_ui_click');
           // Refresh modal
           document.body.removeChild(modal);
           this.showUpgradesModal();
         } else {
+          audioManager.playSfx('sfx_ui_click', { volume: 0.5, pitch: 0.7 });
           card.style.borderColor = '#ff4757';
           setTimeout(() => {
             card.style.borderColor = '#555';
@@ -338,6 +348,7 @@ export class UIManager {
       });
 
       card.addEventListener('mouseover', () => {
+        audioManager.playSfx('sfx_ui_hover', { volume: 0.3 });
         card.style.borderColor = '#ffd700';
       });
       card.addEventListener('mouseout', () => {
@@ -346,6 +357,7 @@ export class UIManager {
     });
 
     document.getElementById('close-upgrades').addEventListener('click', () => {
+      audioManager.playSfx('sfx_ui_click');
       document.body.removeChild(modal);
     });
   }

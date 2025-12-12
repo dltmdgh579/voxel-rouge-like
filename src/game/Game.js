@@ -6,6 +6,7 @@ import { VoxelMap } from '../world/Map.js';
 import { ArtifactManager } from './Artifact.js';
 import { AutoSkillManager } from './AutoSkillManager.js';
 import { UIManager } from '../ui/HUD.js';
+import { audioManager } from './AudioManager.js';
 import { GAME_CONFIG, PASSIVE_SKILLS } from '../utils/constants.js';
 
 export class Game {
@@ -24,6 +25,12 @@ export class Game {
 
     this.keys = {};
     this.mouse = { x: 0, y: 0, clicked: false };
+
+    // Audio manager reference
+    this.audio = audioManager;
+
+    // Track last day for BGM changes
+    this.lastDay = 0;
 
     this.init();
   }
@@ -67,8 +74,28 @@ export class Game {
     // Event listeners
     this.setupEventListeners();
 
+    // Initialize audio on first user interaction
+    this.setupAudioInit();
+
     // Start game loop
     this.animate();
+  }
+
+  setupAudioInit() {
+    const initAudio = async () => {
+      await this.audio.init();
+      // Play lobby BGM
+      const gameState = useGameStore.getState().gameState;
+      if (gameState === 'lobby') {
+        this.audio.playBgm('bgm_lobby');
+      }
+      // Remove listeners after first interaction
+      document.removeEventListener('click', initAudio);
+      document.removeEventListener('keydown', initAudio);
+    };
+
+    document.addEventListener('click', initAudio);
+    document.addEventListener('keydown', initAudio);
   }
 
   setupLighting() {
@@ -178,6 +205,9 @@ export class Game {
 
       // Check collisions
       this.checkCollisions();
+
+      // Update BGM based on day
+      this.updateBgm();
     }
 
     // Update UI
@@ -284,5 +314,20 @@ export class Game {
     raycaster.ray.intersectPlane(plane, target);
 
     return target;
+  }
+
+  updateBgm() {
+    const currentDay = useGameStore.getState().run.day;
+
+    if (currentDay !== this.lastDay) {
+      this.lastDay = currentDay;
+
+      // Play day change sound
+      this.audio.playSfx('sfx_day_change');
+
+      // Switch BGM based on day
+      const bgmKey = this.audio.getBgmForDay(currentDay);
+      this.audio.playBgm(bgmKey, 2);
+    }
   }
 }
