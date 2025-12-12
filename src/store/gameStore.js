@@ -36,6 +36,7 @@ const saveAccountData = (account) => {
 export const useGameStore = create((set, get) => ({
   // Game state
   gameState: 'lobby', // 'lobby', 'playing', 'paused', 'levelup', 'gameover'
+  isPaused: false,
 
   // Account data (persistent)
   account: loadAccountData(),
@@ -147,7 +148,31 @@ export const useGameStore = create((set, get) => ({
   returnToLobby: () => {
     // Play lobby BGM
     audioManager.playBgm('bgm_lobby', 1);
-    set({ gameState: 'lobby' });
+    set({ gameState: 'lobby', isPaused: false });
+  },
+
+  // Pause/Resume
+  pauseGame: () => {
+    const { gameState } = get();
+    if (gameState === 'playing') {
+      set({ gameState: 'paused', isPaused: true });
+    }
+  },
+
+  resumeGame: () => {
+    const { gameState } = get();
+    if (gameState === 'paused') {
+      set({ gameState: 'playing', isPaused: false });
+    }
+  },
+
+  togglePause: () => {
+    const { gameState } = get();
+    if (gameState === 'playing') {
+      set({ gameState: 'paused', isPaused: true });
+    } else if (gameState === 'paused') {
+      set({ gameState: 'playing', isPaused: false });
+    }
   },
 
   // Day system

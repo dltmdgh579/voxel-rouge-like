@@ -127,6 +127,20 @@ export class Game {
     window.addEventListener('keydown', (e) => {
       this.keys[e.key.toLowerCase()] = true;
 
+      const gameState = useGameStore.getState().gameState;
+
+      // ESC key for pause menu
+      if (e.key === 'Escape') {
+        if (gameState === 'playing' || gameState === 'paused') {
+          useGameStore.getState().togglePause();
+          this.uiManager.togglePauseMenu();
+        }
+        return;
+      }
+
+      // Don't process other keys if paused
+      if (gameState !== 'playing') return;
+
       // Skill keys
       if (e.key.toLowerCase() === 'q') {
         this.player.useSkill('spinAttack');

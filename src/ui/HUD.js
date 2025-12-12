@@ -6,7 +6,10 @@ export class UIManager {
   constructor(game) {
     this.game = game;
     this.levelUpShown = false; // Flag to prevent re-rendering
+    this.settingsOpen = false;
     this.setupEventListeners();
+    this.setupPauseMenuListeners();
+    this.setupSettingsListeners();
   }
 
   setupEventListeners() {
@@ -29,6 +32,137 @@ export class UIManager {
       audioManager.playSfx('sfx_ui_click');
       this.showUpgradesModal();
     });
+  }
+
+  setupPauseMenuListeners() {
+    // Resume button
+    document.getElementById('resume-btn').addEventListener('click', () => {
+      audioManager.playSfx('sfx_ui_click');
+      useGameStore.getState().resumeGame();
+      this.hidePauseMenu();
+    });
+
+    // Settings button
+    document.getElementById('settings-btn').addEventListener('click', () => {
+      audioManager.playSfx('sfx_ui_click');
+      this.toggleSettings();
+    });
+
+    // Quit button
+    document.getElementById('quit-btn').addEventListener('click', () => {
+      audioManager.playSfx('sfx_ui_click');
+      this.hidePauseMenu();
+      this.hideGameOver();
+      useGameStore.getState().endGame();
+      // Return to lobby after a brief moment
+      setTimeout(() => {
+        this.showLobby();
+      }, 100);
+    });
+  }
+
+  setupSettingsListeners() {
+    // Master volume
+    const masterSlider = document.getElementById('master-volume');
+    const masterValue = document.getElementById('master-value');
+    masterSlider.value = audioManager.masterVolume * 100;
+    masterValue.textContent = Math.round(audioManager.masterVolume * 100) + '%';
+
+    masterSlider.addEventListener('input', (e) => {
+      const value = e.target.value / 100;
+      audioManager.setMasterVolume(value);
+      masterValue.textContent = e.target.value + '%';
+    });
+
+    // BGM volume
+    const bgmSlider = document.getElementById('bgm-volume');
+    const bgmValue = document.getElementById('bgm-value');
+    bgmSlider.value = audioManager.bgmVolume * 100;
+    bgmValue.textContent = Math.round(audioManager.bgmVolume * 100) + '%';
+
+    bgmSlider.addEventListener('input', (e) => {
+      const value = e.target.value / 100;
+      audioManager.setBgmVolume(value);
+      bgmValue.textContent = e.target.value + '%';
+    });
+
+    // SFX volume
+    const sfxSlider = document.getElementById('sfx-volume');
+    const sfxValue = document.getElementById('sfx-value');
+    sfxSlider.value = audioManager.sfxVolume * 100;
+    sfxValue.textContent = Math.round(audioManager.sfxVolume * 100) + '%';
+
+    sfxSlider.addEventListener('input', (e) => {
+      const value = e.target.value / 100;
+      audioManager.setSfxVolume(value);
+      sfxValue.textContent = e.target.value + '%';
+    });
+
+    // Mute all button
+    const muteBtn = document.getElementById('mute-all-btn');
+    this.updateMuteButton(muteBtn);
+
+    muteBtn.addEventListener('click', () => {
+      audioManager.playSfx('sfx_ui_click');
+      audioManager.toggleMute();
+      this.updateMuteButton(muteBtn);
+    });
+  }
+
+  updateMuteButton(btn) {
+    if (audioManager.isMuted) {
+      btn.textContent = 'Unmute';
+      btn.classList.add('muted');
+    } else {
+      btn.textContent = 'Mute';
+      btn.classList.remove('muted');
+    }
+  }
+
+  toggleSettings() {
+    this.settingsOpen = !this.settingsOpen;
+    const panel = document.getElementById('settings-panel');
+    if (this.settingsOpen) {
+      panel.classList.add('active');
+    } else {
+      panel.classList.remove('active');
+    }
+  }
+
+  togglePauseMenu() {
+    const pauseMenu = document.getElementById('pause-menu');
+    const isPaused = useGameStore.getState().isPaused;
+
+    if (isPaused) {
+      this.showPauseMenu();
+    } else {
+      this.hidePauseMenu();
+    }
+  }
+
+  showPauseMenu() {
+    const state = useGameStore.getState();
+    const { run } = state;
+
+    // Update pause menu stats
+    document.getElementById('pause-day').textContent = run.day;
+    document.getElementById('pause-level').textContent = run.level;
+    document.getElementById('pause-hp').textContent = `${Math.ceil(run.stats.hp)}/${run.stats.maxHp}`;
+    document.getElementById('pause-kills').textContent = run.kills;
+    document.getElementById('pause-coins').textContent = run.coinsEarned;
+
+    // Show pause menu
+    document.getElementById('pause-menu').classList.add('active');
+
+    // Close settings panel if open
+    this.settingsOpen = false;
+    document.getElementById('settings-panel').classList.remove('active');
+  }
+
+  hidePauseMenu() {
+    document.getElementById('pause-menu').classList.remove('active');
+    this.settingsOpen = false;
+    document.getElementById('settings-panel').classList.remove('active');
   }
 
   update() {
