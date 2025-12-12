@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { audioManager } from '../game/AudioManager.js';
-import { BASE_STATS, LEVEL_EXP, AUTO_SKILLS, PASSIVE_SKILLS, SKILL_UPGRADES } from '../utils/constants.js';
+import { BASE_STATS, LEVEL_EXP, AUTO_SKILLS, PASSIVE_SKILLS, SKILL_UPGRADES, PERMANENT_UPGRADES } from '../utils/constants.js';
 
 // Load saved account data from localStorage
 const loadAccountData = () => {
@@ -17,8 +17,8 @@ const loadAccountData = () => {
     exp: 0,
     coins: 0,
     totalCoins: 0,
-    permanentStats: { hp: 0, atk: 0, def: 0 },
-    upgrades: { hp: 0, atk: 0, def: 0 },
+    permanentStats: { hp: 0, atk: 0, def: 0, spd: 0, crit: 0 },
+    upgrades: {}, // Now stores all upgrade levels by ID
     purchases: [],
     highestDay: 0,
   };
@@ -76,18 +76,39 @@ export const useGameStore = create((set, get) => ({
 
     const { account } = get();
     const baseStats = { ...BASE_STATS };
+    const upgrades = account.upgrades || {};
 
-    // Apply permanent stats
-    baseStats.hp += account.permanentStats.hp;
-    baseStats.maxHp += account.permanentStats.hp;
-    baseStats.atk += account.permanentStats.atk;
-    baseStats.def += account.permanentStats.def;
+    // Apply all permanent upgrades
+    Object.keys(upgrades).forEach(id => {
+      const level = upgrades[id] || 0;
+      const upgrade = PERMANENT_UPGRADES[id];
+      if (!upgrade || level === 0) return;
 
-    // Apply coin upgrades
-    baseStats.hp += account.upgrades.hp * 10;
-    baseStats.maxHp += account.upgrades.hp * 10;
-    baseStats.atk += account.upgrades.atk * 2;
-    baseStats.def += account.upgrades.def * 1;
+      const effect = upgrade.effect;
+      if (effect.hp) {
+        baseStats.hp += effect.hp * level;
+        baseStats.maxHp += effect.hp * level;
+      }
+      if (effect.atk) baseStats.atk += effect.atk * level;
+      if (effect.def) baseStats.def += effect.def * level;
+      if (effect.spd) baseStats.spd += effect.spd * level;
+      if (effect.crit) baseStats.crit += effect.crit * level;
+    });
+
+    // Apply permanent stats (legacy support)
+    baseStats.hp += account.permanentStats.hp || 0;
+    baseStats.maxHp += account.permanentStats.hp || 0;
+    baseStats.atk += account.permanentStats.atk || 0;
+    baseStats.def += account.permanentStats.def || 0;
+    baseStats.spd += account.permanentStats.spd || 0;
+    baseStats.crit += account.permanentStats.crit || 0;
+
+    // Calculate bonus values from upgrades
+    const coinBonus = (upgrades.coinMagnet || 0) * 0.1;
+    const expBonus = (upgrades.expBoost || 0) * 0.05;
+    const hasRevival = (upgrades.revival || 0) >= 1;
+    const startLifesteal = (upgrades.vampiricStart || 0) * 0.02;
+    const explosionChance = (upgrades.explosiveKills || 0) * 0.1;
 
     set({
       gameState: 'playing',
@@ -102,10 +123,17 @@ export const useGameStore = create((set, get) => ({
         skills: ['spinAttack', 'dash'],
         skillCooldowns: {},
         autoSkills: [],
-        passives: [],
+        passives: startLifesteal > 0 ? ['lifesteal'] : [], // Start with lifesteal if upgraded
         skillUpgrades: {},
         kills: 0,
         coinsEarned: 0,
+        // Bonus stats from upgrades
+        coinBonus,
+        expBonus,
+        hasRevival,
+        usedRevival: false,
+        explosionChance,
+        startLifesteal,
       },
       monsters: [],
       artifacts: [],
@@ -448,9 +476,19 @@ export const useGameStore = create((set, get) => ({
   },
 
   // Upgrade purchases (lobby)
-  purchaseUpgrade: (type) => {
+  purchaseUpgrade: (upgradeId) => {
     const { account } = get();
-    const cost = (account.upgrades[type] + 1) * 100;
+    const upgrade = PERMANENT_UPGRADES[upgradeId];
+
+    if (!upgrade) return false;
+
+    const currentLevel = account.upgrades[upgradeId] || 0;
+
+    // Check max level
+    if (currentLevel >= upgrade.maxLevel) return false;
+
+    // Calculate cost
+    const cost = Math.floor(upgrade.baseCost * Math.pow(upgrade.costMultiplier, currentLevel));
 
     if (account.coins >= cost) {
       const newAccount = {
@@ -458,7 +496,7 @@ export const useGameStore = create((set, get) => ({
         coins: account.coins - cost,
         upgrades: {
           ...account.upgrades,
-          [type]: account.upgrades[type] + 1,
+          [upgradeId]: currentLevel + 1,
         },
       };
       saveAccountData(newAccount);
@@ -466,6 +504,18 @@ export const useGameStore = create((set, get) => ({
       return true;
     }
     return false;
+  },
+
+  // Get upgrade cost for display
+  getUpgradeCost: (upgradeId) => {
+    const { account } = get();
+    const upgrade = PERMANENT_UPGRADES[upgradeId];
+    if (!upgrade) return 0;
+
+    const currentLevel = account.upgrades[upgradeId] || 0;
+    if (currentLevel >= upgrade.maxLevel) return -1; // Max level reached
+
+    return Math.floor(upgrade.baseCost * Math.pow(upgrade.costMultiplier, currentLevel));
   },
 
   // Skill cooldowns
