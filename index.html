@@ -669,6 +669,185 @@
       font-size: 12px;
       margin-top: 20px;
     }
+
+    /* Pause Menu Skills Section */
+    .pause-skills {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 10px;
+      padding: 15px;
+      margin-bottom: 20px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .pause-skills-title {
+      color: #ffd700;
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+      text-align: center;
+    }
+
+    .pause-skills-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    .pause-skill-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .pause-skill-item .skill-icon {
+      font-size: 16px;
+    }
+
+    .pause-skill-item.autoSkill {
+      border-color: rgba(255, 107, 107, 0.5);
+      background: rgba(255, 107, 107, 0.15);
+    }
+
+    .pause-skill-item.passive {
+      border-color: rgba(46, 213, 115, 0.5);
+      background: rgba(46, 213, 115, 0.15);
+    }
+
+    .pause-skill-item.upgrade {
+      border-color: rgba(155, 89, 182, 0.5);
+      background: rgba(155, 89, 182, 0.15);
+    }
+
+    .pause-no-skills {
+      color: #666;
+      font-size: 12px;
+      text-align: center;
+      padding: 10px;
+    }
+
+    /* Skill Acquisition Notification */
+    #skill-notification {
+      position: absolute;
+      top: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 80;
+      pointer-events: none;
+    }
+
+    .skill-notif {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: linear-gradient(135deg, rgba(45, 58, 74, 0.95), rgba(30, 40, 50, 0.95));
+      border: 3px solid #ffd700;
+      border-radius: 12px;
+      padding: 15px 25px;
+      margin-bottom: 10px;
+      animation: skillNotifIn 0.4s ease, skillNotifOut 0.4s ease 2.6s forwards;
+      box-shadow: 0 5px 20px rgba(255, 215, 0, 0.3);
+    }
+
+    @keyframes skillNotifIn {
+      from {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.9);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    @keyframes skillNotifOut {
+      from {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+      to {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.9);
+      }
+    }
+
+    .skill-notif-icon {
+      font-size: 32px;
+      filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.5));
+    }
+
+    .skill-notif-content {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .skill-notif-label {
+      font-size: 11px;
+      color: #7bed9f;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .skill-notif-name {
+      font-size: 18px;
+      font-weight: bold;
+      color: white;
+      text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+    }
+
+    .skill-notif-desc {
+      font-size: 12px;
+      color: #a0aab4;
+    }
+
+    /* Active Skills Display (bottom left) */
+    #active-skills-display {
+      position: absolute;
+      bottom: 100px;
+      left: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+
+    .active-skill-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .active-skill-icon {
+      width: 40px;
+      height: 40px;
+      background: rgba(0, 0, 0, 0.7);
+      border: 2px solid #555;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+    }
+
+    .active-skill-icon.autoSkill {
+      border-color: #ff6b6b;
+    }
+
+    .active-skill-icon.passive {
+      border-color: #2ed573;
+    }
+
+    .active-skill-icon.upgrade {
+      border-color: #a29bfe;
+    }
   </style>
 </head>
 <body>
@@ -728,6 +907,12 @@
       </div>
     </div>
 
+    <!-- Skill Acquisition Notification -->
+    <div id="skill-notification"></div>
+
+    <!-- Active Skills Display -->
+    <div id="active-skills-display" style="display: none;"></div>
+
     <!-- Level Up UI -->
     <div id="level-up-ui">
       <div class="level-up-header">
@@ -775,6 +960,13 @@
           <div class="pause-stat-row">
             <span class="label">Coins</span>
             <span class="value" id="pause-coins">0</span>
+          </div>
+        </div>
+
+        <div class="pause-skills" id="pause-skills">
+          <div class="pause-skills-title">Acquired Skills</div>
+          <div class="pause-skills-list" id="pause-skills-list">
+            <div class="pause-no-skills">No skills acquired yet</div>
           </div>
         </div>
 

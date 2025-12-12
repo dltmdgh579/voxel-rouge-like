@@ -1,6 +1,6 @@
 import { useGameStore } from '../store/gameStore.js';
 import { audioManager } from '../game/AudioManager.js';
-import { SKILLS } from '../utils/constants.js';
+import { SKILLS, AUTO_SKILLS, PASSIVE_SKILLS, SKILL_UPGRADES } from '../utils/constants.js';
 
 export class UIManager {
   constructor(game) {
@@ -151,6 +151,9 @@ export class UIManager {
     document.getElementById('pause-kills').textContent = run.kills;
     document.getElementById('pause-coins').textContent = run.coinsEarned;
 
+    // Update skills list
+    this.updatePauseSkillsList(run);
+
     // Show pause menu
     document.getElementById('pause-menu').classList.add('active');
 
@@ -159,10 +162,141 @@ export class UIManager {
     document.getElementById('settings-panel').classList.remove('active');
   }
 
+  updatePauseSkillsList(run) {
+    const container = document.getElementById('pause-skills-list');
+    const allSkills = [];
+
+    // Collect auto skills
+    run.autoSkills.forEach(id => {
+      const skill = AUTO_SKILLS[id];
+      if (skill) {
+        allSkills.push({ ...skill, type: 'autoSkill' });
+      }
+    });
+
+    // Collect passive skills
+    run.passives.forEach(id => {
+      const skill = PASSIVE_SKILLS[id];
+      if (skill) {
+        allSkills.push({ ...skill, type: 'passive' });
+      }
+    });
+
+    // Collect upgrades
+    Object.keys(run.skillUpgrades).forEach(id => {
+      if (run.skillUpgrades[id]) {
+        const upgrade = SKILL_UPGRADES[id];
+        if (upgrade) {
+          allSkills.push({ ...upgrade, type: 'upgrade' });
+        }
+      }
+    });
+
+    if (allSkills.length === 0) {
+      container.innerHTML = '<div class="pause-no-skills">No skills acquired yet</div>';
+      return;
+    }
+
+    container.innerHTML = allSkills.map(skill => `
+      <div class="pause-skill-item ${skill.type}" title="${skill.desc}">
+        <span class="skill-icon">${skill.icon}</span>
+        <span>${skill.name}</span>
+      </div>
+    `).join('');
+  }
+
   hidePauseMenu() {
     document.getElementById('pause-menu').classList.remove('active');
     this.settingsOpen = false;
     document.getElementById('settings-panel').classList.remove('active');
+  }
+
+  // Show skill acquisition notification
+  showSkillNotification(choice) {
+    const container = document.getElementById('skill-notification');
+
+    const notif = document.createElement('div');
+    notif.className = 'skill-notif';
+    notif.innerHTML = `
+      <div class="skill-notif-icon">${choice.icon || '✨'}</div>
+      <div class="skill-notif-content">
+        <div class="skill-notif-label">${choice.category || choice.type}</div>
+        <div class="skill-notif-name">${choice.name}</div>
+        <div class="skill-notif-desc">${choice.desc || ''}</div>
+      </div>
+    `;
+
+    container.appendChild(notif);
+
+    // Remove after animation
+    setTimeout(() => {
+      if (notif.parentNode) {
+        notif.parentNode.removeChild(notif);
+      }
+    }, 3000);
+  }
+
+  // Update active skills display at bottom left
+  updateActiveSkillsDisplay() {
+    const state = useGameStore.getState();
+    const { run } = state;
+    const container = document.getElementById('active-skills-display');
+
+    if (state.gameState !== 'playing' && state.gameState !== 'paused') {
+      container.style.display = 'none';
+      return;
+    }
+
+    const allSkills = [];
+
+    // Collect auto skills
+    run.autoSkills.forEach(id => {
+      const skill = AUTO_SKILLS[id];
+      if (skill) {
+        allSkills.push({ ...skill, type: 'autoSkill' });
+      }
+    });
+
+    // Collect passive skills
+    run.passives.forEach(id => {
+      const skill = PASSIVE_SKILLS[id];
+      if (skill) {
+        allSkills.push({ ...skill, type: 'passive' });
+      }
+    });
+
+    // Collect upgrades
+    Object.keys(run.skillUpgrades).forEach(id => {
+      if (run.skillUpgrades[id]) {
+        const upgrade = SKILL_UPGRADES[id];
+        if (upgrade) {
+          allSkills.push({ ...upgrade, type: 'upgrade' });
+        }
+      }
+    });
+
+    if (allSkills.length === 0) {
+      container.style.display = 'none';
+      return;
+    }
+
+    container.style.display = 'flex';
+
+    // Group skills into rows of 5
+    const rows = [];
+    for (let i = 0; i < allSkills.length; i += 5) {
+      rows.push(allSkills.slice(i, i + 5));
+    }
+
+    container.innerHTML = rows.map(row => `
+      <div class="active-skill-row">
+        ${row.map(skill => `
+          <div class="active-skill-icon ${skill.type}" title="${skill.name}: ${skill.desc}">
+            ${skill.icon}
+          </div>
+        `).join('')}
+      </div>
+    `).join('');
   }
 
   update() {
@@ -170,9 +304,10 @@ export class UIManager {
 
     if (state.gameState === 'lobby') {
       this.updateLobby(state);
-    } else if (state.gameState === 'playing' || state.gameState === 'levelup') {
+    } else if (state.gameState === 'playing' || state.gameState === 'levelup' || state.gameState === 'paused') {
       this.updateHUD(state);
       this.updateSkillsHUD(state);
+      this.updateActiveSkillsDisplay();
     }
 
     if (state.gameState === 'levelup' && state.showLevelUp && !this.levelUpShown) {
@@ -287,6 +422,11 @@ export class UIManager {
           useGameStore.getState().selectLevelUpChoice(choice);
           levelUpUI.classList.remove('active');
           this.levelUpShown = false;
+
+          // Show skill notification (only for skills, not stat boosts)
+          if (choice.type !== 'stat') {
+            this.showSkillNotification(choice);
+          }
         }, 200);
       });
 
